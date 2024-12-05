@@ -1,0 +1,718 @@
+[
+    {
+        "id": "7f8f648371c839df",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "46c5ef0e31a5fe1e",
+        "type": "http request",
+        "z": "7f8f648371c839df",
+        "name": "Fetch Stock Data",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "https://finnhub.io/api/v1/quote?symbol=TSLA&token=csvp0ppr01qo5uuei4h0csvp0ppr01qo5uuei4hg",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 330,
+        "y": 120,
+        "wires": [
+            [
+                "4a931e33064f1ee2",
+                "281325bbcfde3f09",
+                "a54dde9f8e8460d8"
+            ]
+        ]
+    },
+    {
+        "id": "4a931e33064f1ee2",
+        "type": "json",
+        "z": "7f8f648371c839df",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 450,
+        "y": 20,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "4480e2df18332656",
+        "type": "inject",
+        "z": "7f8f648371c839df",
+        "name": "Trigger",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 90,
+        "y": 120,
+        "wires": [
+            [
+                "46c5ef0e31a5fe1e",
+                "281325bbcfde3f09",
+                "82e666e692914611",
+                "3cc5cc8ca7e70571"
+            ]
+        ]
+    },
+    {
+        "id": "281325bbcfde3f09",
+        "type": "function",
+        "z": "7f8f648371c839df",
+        "name": "Extract Stock Info",
+        "func": "// Parse the payload from string to JSON\nlet stockData;\ntry {\n    stockData = JSON.parse(msg.payload);\n} catch (error) {\n    node.error(\"Error parsing JSON: \" + error.message);\n    return null;\n}\n\n// Check if the stock data exists and is valid\nif (!stockData || typeof stockData !== 'object') {\n    node.error(\"Invalid stock data received.\");\n    return null;\n}\n\n// Extract relevant fields\nlet timestamp = new Date(stockData.t * 1000).toLocaleString(); // Convert timestamp\nlet openPrice = stockData.o; // Open price\nlet closePrice = stockData.c; // Current (close) price\nlet highPrice = stockData.h; // High price\nlet lowPrice = stockData.l; // Low price\n\n// Create or retrieve the array of close prices from context\nlet closePrices = context.get(\"closePrices\") || [];\n\n// Add the current close price to the array\nclosePrices.push(closePrice);\n\n// Keep only the last 5 prices for the moving average\nif (closePrices.length > 5) {\n    closePrices.shift(); // Remove the oldest price\n}\n\n// Calculate the Simple Moving Average (SMA) for the last 5 prices\nlet sma = closePrices.reduce((sum, price) => sum + price, 0) / closePrices.length;\n\n// Save the updated closePrices array back to context\ncontext.set(\"closePrices\", closePrices);\n\n// Format the output\nmsg.payload = {\n    timestamp: timestamp,\n    openPrice: openPrice,\n    closePrice: closePrice,\n    highPrice: highPrice,\n    lowPrice: lowPrice,\n    movingAverage: sma.toFixed(2) // Simple Moving Average (5 periods)\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 220,
+        "wires": [
+            [
+                "a54dde9f8e8460d8",
+                "abe02ae485386f1c",
+                "3cc5cc8ca7e70571",
+                "0ae58e044dc838ed",
+                "bbc49713a6a46463",
+                "e2c7b3a9050268f5"
+            ]
+        ]
+    },
+    {
+        "id": "a54dde9f8e8460d8",
+        "type": "debug",
+        "z": "7f8f648371c839df",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 680,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "82e666e692914611",
+        "type": "debug",
+        "z": "7f8f648371c839df",
+        "name": "debug 2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 260,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "abe02ae485386f1c",
+        "type": "switch",
+        "z": "7f8f648371c839df",
+        "name": "",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "lt",
+                "v": "msg.payload.closePrice <340",
+                "vt": "str"
+            },
+            {
+                "t": "gt",
+                "v": "msg.payload.closePrice >350",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 3,
+        "x": 70,
+        "y": 360,
+        "wires": [
+            [
+                "ed651378ef1016d8",
+                "f7aebc21bec381ad"
+            ],
+            [
+                "265feee1871ff73b",
+                "f7aebc21bec381ad"
+            ],
+            [
+                "4739078ce1ece9a0"
+            ]
+        ],
+        "outputLabels": [
+            "Buy Alert",
+            "Sell Alert",
+            ""
+        ]
+    },
+    {
+        "id": "47f7939aecb58e7f",
+        "type": "telegram sender",
+        "z": "7f8f648371c839df",
+        "name": "",
+        "bot": "19b55b1188932dc7",
+        "haserroroutput": false,
+        "outputs": 1,
+        "x": 670,
+        "y": 340,
+        "wires": [
+            [
+                "c1233cbdc7ad64d2"
+            ]
+        ]
+    },
+    {
+        "id": "4739078ce1ece9a0",
+        "type": "debug",
+        "z": "7f8f648371c839df",
+        "name": "debug 3",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 660,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "ed651378ef1016d8",
+        "type": "function",
+        "z": "7f8f648371c839df",
+        "name": "Buy Alert",
+        "func": "\nmsg.payload = {\n    chatId: 1687278005,\n    type: \"message\",\n    content: \"Buy Alert: Stock price is below 340!\"\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 300,
+        "wires": [
+            [
+                "47f7939aecb58e7f"
+            ]
+        ]
+    },
+    {
+        "id": "265feee1871ff73b",
+        "type": "function",
+        "z": "7f8f648371c839df",
+        "name": "Sell Alert",
+        "func": "msg.payload = {\n    chatId: 1687278005,\n    type: \"message\",\n    content: \"Sell Alert: Stock price is above 350!\"\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 380,
+        "wires": [
+            [
+                "47f7939aecb58e7f"
+            ]
+        ]
+    },
+    {
+        "id": "c1233cbdc7ad64d2",
+        "type": "debug",
+        "z": "7f8f648371c839df",
+        "name": "debug 4",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 860,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "3cc5cc8ca7e70571",
+        "type": "ui_chart",
+        "z": "7f8f648371c839df",
+        "name": "",
+        "group": "0e2d8f20b32159f0",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "label": "Stock Prices",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#712323",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 670,
+        "y": 40,
+        "wires": [
+            [
+                "a1c0de0dd425a0bc"
+            ]
+        ]
+    },
+    {
+        "id": "f7aebc21bec381ad",
+        "type": "function",
+        "z": "7f8f648371c839df",
+        "name": "function 1",
+        "func": "if (msg.payload.closePrice < 340) {\n    msg.payload = \"Buy Alert: Price is \" + msg.payload.closePrice;\n    return msg;\n} else if (msg.payload.closePrice > 350) {\n    msg.payload = \"Sell Alert: Price is \" + msg.payload.closePrice;\n    return msg;\n} else {\n    return null; // No alert\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 140,
+        "y": 500,
+        "wires": [
+            [
+                "d02543157312296e"
+            ]
+        ]
+    },
+    {
+        "id": "d02543157312296e",
+        "type": "ui_text",
+        "z": "7f8f648371c839df",
+        "group": "0e2d8f20b32159f0",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "Alert",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 490,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "f59a66f13886dae8",
+        "type": "sqlite",
+        "z": "7f8f648371c839df",
+        "mydb": "4c4fb076529c04ac",
+        "sqlquery": "msg.topic",
+        "sql": "",
+        "name": "",
+        "x": 380,
+        "y": 600,
+        "wires": [
+            [
+                "e3c86a0dbc6bc40c"
+            ]
+        ],
+        "icon": "node-red/db.svg"
+    },
+    {
+        "id": "fc0a3e1e5d4cc9bb",
+        "type": "inject",
+        "z": "7f8f648371c839df",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"symbol\": \"AAPL\", \"price\": 150.25}",
+        "payloadType": "json",
+        "x": 110,
+        "y": 600,
+        "wires": [
+            [
+                "f59a66f13886dae8",
+                "e3c86a0dbc6bc40c",
+                "e2c7b3a9050268f5",
+                "bbc49713a6a46463"
+            ]
+        ]
+    },
+    {
+        "id": "e3c86a0dbc6bc40c",
+        "type": "debug",
+        "z": "7f8f648371c839df",
+        "name": "debug 6",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 820,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "0ae58e044dc838ed",
+        "type": "ui_gauge",
+        "z": "7f8f648371c839df",
+        "name": "",
+        "group": "0e2d8f20b32159f0",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "Moving Avarage",
+        "label": "units",
+        "format": "{{msg.payload.closePrice}}",
+        "min": 0,
+        "max": "500",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 800,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "a1c0de0dd425a0bc",
+        "type": "debug",
+        "z": "7f8f648371c839df",
+        "name": "debug 7",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 920,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "bbc49713a6a46463",
+        "type": "function",
+        "z": "7f8f648371c839df",
+        "name": "Process And insert data",
+        "func": "msg.topic = \"INSERT INTO stock_prices (symbol, price) VALUES (?, ?)\";\nmsg.params = [msg.payload.symbol, msg.payload.price];\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 150,
+        "y": 700,
+        "wires": [
+            [
+                "557e68f87dc6a666"
+            ]
+        ]
+    },
+    {
+        "id": "557e68f87dc6a666",
+        "type": "sqlite",
+        "z": "7f8f648371c839df",
+        "mydb": "4c4fb076529c04ac",
+        "sqlquery": "msg.topic",
+        "sql": "",
+        "name": "Node red db",
+        "x": 350,
+        "y": 700,
+        "wires": [
+            [
+                "98a0127cc8160625"
+            ]
+        ],
+        "icon": "node-red/db.svg"
+    },
+    {
+        "id": "98a0127cc8160625",
+        "type": "function",
+        "z": "7f8f648371c839df",
+        "name": "Retrive Historical Data",
+        "func": "msg.topic = \"SELECT timestamp, price FROM stock_prices ORDER BY timestamp DESC LIMIT 10\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 700,
+        "wires": [
+            [
+                "d7ba2cc4d12b8041",
+                "a1328905b30afda6",
+                "f25146691fde6b6f"
+            ]
+        ]
+    },
+    {
+        "id": "d7ba2cc4d12b8041",
+        "type": "sqlite",
+        "z": "7f8f648371c839df",
+        "mydb": "4c4fb076529c04ac",
+        "sqlquery": "msg.topic",
+        "sql": "",
+        "name": "node red db",
+        "x": 830,
+        "y": 700,
+        "wires": [
+            [
+                "f25146691fde6b6f"
+            ]
+        ],
+        "icon": "node-red/db.svg"
+    },
+    {
+        "id": "f25146691fde6b6f",
+        "type": "function",
+        "z": "7f8f648371c839df",
+        "name": "Format Data For Chart",
+        "func": "var historicalData = [];\nfor (var i = 0; i < msg.payload.length; i++) {\n    historicalData.push({\n        x: msg.payload[i].timestamp,  // التوقيت أو التاريخ\n        y: msg.payload[i].price       // السعر\n    });\n}\nmsg.payload = [{\n    series: [\"Historical Data\"],   // اسم السلسلة\n    data: [historicalData],         // البيانات نفسها\n    labels: []                      // ممكن تضيفي تسميات لبيانات x إذا حابة\n}];\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1060,
+        "y": 700,
+        "wires": [
+            [
+                "e2c7b3a9050268f5",
+                "c4dc8b400460cf79"
+            ]
+        ]
+    },
+    {
+        "id": "e2c7b3a9050268f5",
+        "type": "ui_chart",
+        "z": "7f8f648371c839df",
+        "name": "",
+        "group": "0e2d8f20b32159f0",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "label": "Historical Data",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "500",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1280,
+        "y": 700,
+        "wires": [
+            [
+                "9746656428ca6808"
+            ]
+        ]
+    },
+    {
+        "id": "a1328905b30afda6",
+        "type": "debug",
+        "z": "7f8f648371c839df",
+        "name": "debug 8",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 700,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "c4dc8b400460cf79",
+        "type": "debug",
+        "z": "7f8f648371c839df",
+        "name": "debug 9",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1220,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "9746656428ca6808",
+        "type": "debug",
+        "z": "7f8f648371c839df",
+        "name": "debug 10",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1480,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "19b55b1188932dc7",
+        "type": "telegram bot",
+        "botname": "Fatmaaaagomaaaabot",
+        "usernames": "",
+        "chatids": "1687278005",
+        "baseapiurl": "",
+        "testenvironment": false,
+        "updatemode": "polling",
+        "addressfamily": "",
+        "pollinterval": "300",
+        "usesocks": false,
+        "sockshost": "",
+        "socksprotocol": "socks5",
+        "socksport": "6667",
+        "socksusername": "anonymous",
+        "sockspassword": "",
+        "bothost": "",
+        "botpath": "",
+        "localbotport": "8443",
+        "publicbotport": "8443",
+        "privatekey": "",
+        "certificate": "",
+        "useselfsignedcertificate": false,
+        "sslterminated": false,
+        "verboselogging": false
+    },
+    {
+        "id": "0e2d8f20b32159f0",
+        "type": "ui_group",
+        "name": "Stock Metrices",
+        "tab": "7e4f6687ecbc68af",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "4c4fb076529c04ac",
+        "type": "sqlitedb",
+        "db": "C:\\Users\\Twins\\Downloads\\sqlite",
+        "mode": "RWC"
+    },
+    {
+        "id": "7e4f6687ecbc68af",
+        "type": "ui_tab",
+        "name": "Stock Dashboard Tab",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    }
+]
